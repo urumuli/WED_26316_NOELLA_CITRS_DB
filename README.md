@@ -189,6 +189,8 @@ Tracks all changes for audit purposes.
 - `idx_admin_actions_complaint` on ADMIN_ACTIONS(Complaint_ID)
 - `idx_students_dept` on STUDENTS(Department)
 
+  ![here are ERdiagram for table]()
+
 ---
 
 ## 📥 Installation Guide
