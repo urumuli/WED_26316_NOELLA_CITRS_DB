@@ -189,7 +189,7 @@ Tracks all changes for audit purposes.
 - `idx_admin_actions_complaint` on ADMIN_ACTIONS(Complaint_ID)
 - `idx_students_dept` on STUDENTS(Department)
 
-  ![here are ERdiagram for table]()
+  ![here are ERdiagram for table](https://github.com/urumuli/WED_26316_NOELLA_CITRS_DB/blob/main/DIAGRAM/Untitled%20diagram-2025-12-07-181239.png)
 
 ---
 
