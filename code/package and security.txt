@@ -1,0 +1,337 @@
+
+   PHASE I — TABLES
+   ============================================================ */
+
+CREATE TABLE STUDENTS (
+    Student_ID NUMBER(10) PRIMARY KEY,
+    Name VARCHAR2(100) NOT NULL,
+    Department VARCHAR2(50) NOT NULL,
+    Email VARCHAR2(100) UNIQUE NOT NULL,
+    Phone VARCHAR2(20),
+    Registration_Date DATE DEFAULT SYSDATE
+);
+
+CREATE TABLE COMPLAINT_CATEGORY (
+    Category_ID NUMBER(5) PRIMARY KEY,
+    Category_Name VARCHAR2(50) NOT NULL UNIQUE,
+    Description VARCHAR2(200)
+);
+
+CREATE TABLE COMPLAINTS (
+    Complaint_ID NUMBER(10) PRIMARY KEY,
+    Student_ID NUMBER(10) NOT NULL,
+    Category_ID NUMBER(5) NOT NULL,
+    Description VARCHAR2(500) NOT NULL,
+    Date_Submitted DATE DEFAULT SYSDATE,
+    Status VARCHAR2(20) DEFAULT 'Pending',
+    Priority VARCHAR2(10) DEFAULT 'Normal',
+    CONSTRAINT fk_student FOREIGN KEY (Student_ID) 
+        REFERENCES STUDENTS(Student_ID) ON DELETE CASCADE,
+    CONSTRAINT fk_category FOREIGN KEY (Category_ID) 
+        REFERENCES COMPLAINT_CATEGORY(Category_ID),
+    CONSTRAINT chk_status CHECK (Status IN ('Pending','In Progress','Resolved','Closed')),
+    CONSTRAINT chk_priority CHECK (Priority IN ('Low','Normal','High','Urgent'))
+);
+
+CREATE TABLE ADMIN_ACTIONS (
+    Action_ID NUMBER(10) PRIMARY KEY,
+    Complaint_ID NUMBER(10) NOT NULL,
+    Admin_Name VARCHAR2(100) NOT NULL,
+    Action_Taken VARCHAR2(500) NOT NULL,
+    Date_Resolved DATE DEFAULT SYSDATE,
+    Notes VARCHAR2(500),
+    CONSTRAINT fk_complaint FOREIGN KEY (Complaint_ID) 
+        REFERENCES COMPLAINTS(Complaint_ID) ON DELETE CASCADE
+);
+
+CREATE TABLE COMPLAINT_AUDIT_LOG (
+    Audit_ID NUMBER PRIMARY KEY,
+    Complaint_ID NUMBER,
+    Changed_By VARCHAR2(100),
+    Change_Date DATE DEFAULT SYSDATE,
+    Old_Status VARCHAR2(20),
+    New_Status VARCHAR2(20),
+    Action VARCHAR2(50)
+);
+
+
+   PHASE II — INDEXES
+   ============================================================ */
+
+CREATE INDEX idx_complaints_student ON COMPLAINTS(Student_ID);
+CREATE INDEX idx_complaints_category ON COMPLAINTS(Category_ID);
+CREATE INDEX idx_complaints_status ON COMPLAINTS(Status);
+CREATE INDEX idx_complaints_date ON COMPLAINTS(Date_Submitted);
+
+
+   PHASE III — SEQUENCES
+   ============================================================ */
+
+CREATE SEQUENCE seq_complaint_id START WITH 1000 INCREMENT BY 1;
+CREATE SEQUENCE seq_action_id START WITH 5000 INCREMENT BY 1;
+CREATE SEQUENCE seq_audit_id START WITH 1 INCREMENT BY 1;
+
+/* ============================================================
+   PHASE IV — INSERT SAMPLE DATA
+   ============================================================ */
+
+INSERT INTO COMPLAINT_CATEGORY VALUES (1, 'Academic','Courses & grades');
+INSERT INTO COMPLAINT_CATEGORY VALUES (2, 'Facilities','Labs & buildings');
+INSERT INTO COMPLAINT_CATEGORY VALUES (3, 'Discipline','Conflicts & behavior');
+
+INSERT INTO STUDENTS VALUES (26326, 'Urumuri Gasana','Computer Science','urumuri@auca.ac.rw','0788123456',SYSDATE);
+
+/* Example complaint */
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26326,1,
+ 'Exam schedule conflict',SYSDATE,'Pending','High');
+
+COMMIT;
+
+/* ============================================================
+   PHASE V — TRIGGERS
+   ============================================================ */
+
+-- Validate complaint before insert
+CREATE OR REPLACE TRIGGER trg_validate_complaint
+BEFORE INSERT ON COMPLAINTS
+FOR EACH ROW
+BEGIN
+    IF :NEW.Complaint_ID IS NULL THEN
+        :NEW.Complaint_ID := seq_complaint_id.NEXTVAL;
+    END IF;
+
+    IF LENGTH(TRIM(:NEW.Description)) < 10 THEN
+        RAISE_APPLICATION_ERROR(-20009,'Description too short');
+    END IF;
+END;
+/
+
+-- Audit Status Change
+CREATE OR REPLACE TRIGGER trg_audit_changes
+AFTER UPDATE OF Status ON COMPLAINTS
+FOR EACH ROW
+BEGIN
+    INSERT INTO COMPLAINT_AUDIT_LOG
+    VALUES (seq_audit_id.NEXTVAL,
+            :NEW.Complaint_ID,
+            USER,
+            SYSDATE,
+            :OLD.Status,
+            :NEW.Status,
+            'STATUS_CHANGE');
+END;
+/
+
+/* Auto resolve when admin action added */
+CREATE OR REPLACE TRIGGER trg_auto_resolve
+AFTER INSERT ON ADMIN_ACTIONS
+FOR EACH ROW
+BEGIN
+    UPDATE COMPLAINTS
+    SET Status = 'Resolved'
+    WHERE Complaint_ID = :NEW.Complaint_ID;
+END;
+/
+
+/* ============================================================
+   PHASE VI — PROCEDURES & FUNCTIONS (PACKAGE)
+   ============================================================ */
+
+CREATE OR REPLACE PACKAGE complaint_pkg AS
+
+    PROCEDURE submit_complaint(
+        p_student_id IN NUMBER,
+        p_category_id IN NUMBER,
+        p_description IN VARCHAR2,
+        p_priority IN VARCHAR2 DEFAULT 'Normal',
+        p_complaint_id OUT NUMBER
+    );
+
+    PROCEDURE resolve_complaint(
+        p_complaint_id IN NUMBER,
+        p_admin_name IN VARCHAR2,
+        p_action_taken IN VARCHAR2,
+        p_notes IN VARCHAR2 DEFAULT NULL
+    );
+
+    PROCEDURE update_complaint_status(
+        p_complaint_id IN NUMBER,
+        p_new_status IN VARCHAR2
+    );
+
+    PROCEDURE list_complaints_by_department(p_department IN VARCHAR2);
+
+    PROCEDURE generate_department_report;
+
+    FUNCTION count_unresolved_complaints RETURN NUMBER;
+
+    FUNCTION count_complaints_by_category(p_category_id IN NUMBER) RETURN NUMBER;
+
+    FUNCTION get_student_complaint_count(p_student_id IN NUMBER) RETURN NUMBER;
+
+    FUNCTION avg_resolution_time RETURN NUMBER;
+
+    FUNCTION get_complaint_status(p_complaint_id IN NUMBER) RETURN VARCHAR2;
+
+END complaint_pkg;
+/
+
+/* ---------------------- PACKAGE BODY --------------------- */
+
+CREATE OR REPLACE PACKAGE BODY complaint_pkg AS
+
+    PROCEDURE submit_complaint(
+        p_student_id IN NUMBER,
+        p_category_id IN NUMBER,
+        p_description IN VARCHAR2,
+        p_priority IN VARCHAR2,
+        p_complaint_id OUT NUMBER
+    ) AS
+        v1 NUMBER; v2 NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO v1 FROM STUDENTS WHERE Student_ID = p_student_id;
+        IF v1=0 THEN RAISE_APPLICATION_ERROR(-20001,'Student not found'); END IF;
+
+        SELECT COUNT(*) INTO v2 FROM COMPLAINT_CATEGORY WHERE Category_ID=p_category_id;
+        IF v2=0 THEN RAISE_APPLICATION_ERROR(-20002,'Category invalid'); END IF;
+
+        INSERT INTO COMPLAINTS
+        VALUES (seq_complaint_id.NEXTVAL,p_student_id,p_category_id,
+                p_description,p_priority,'Pending')
+        RETURNING Complaint_ID INTO p_complaint_id;
+
+        COMMIT;
+    END;
+
+    PROCEDURE resolve_complaint(
+        p_complaint_id IN NUMBER,
+        p_admin_name IN VARCHAR2,
+        p_action_taken IN VARCHAR2,
+        p_notes IN VARCHAR2
+    ) AS
+        v_exist NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO v_exist FROM COMPLAINTS WHERE Complaint_ID=p_complaint_id;
+
+        IF v_exist=0 THEN
+            RAISE_APPLICATION_ERROR(-20004,'Complaint not found');
+        END IF;
+
+        INSERT INTO ADMIN_ACTIONS
+        VALUES(seq_action_id.NEXTVAL,p_complaint_id,p_admin_name,p_action_taken,p_notes);
+
+        COMMIT;
+    END;
+
+    PROCEDURE update_complaint_status(
+        p_complaint_id IN NUMBER,
+        p_new_status IN VARCHAR2
+    ) AS
+    BEGIN
+        UPDATE COMPLAINTS SET Status=p_new_status WHERE Complaint_ID=p_complaint_id;
+
+        IF SQL%ROWCOUNT=0 THEN
+            RAISE_APPLICATION_ERROR(-20008,'Complaint not found');
+        END IF;
+
+        COMMIT;
+    END;
+
+    PROCEDURE list_complaints_by_department(p_department IN VARCHAR2) AS
+        CURSOR c IS
+            SELECT c.Complaint_ID, s.Name, c.Status
+            FROM COMPLAINTS c JOIN STUDENTS s
+            ON c.Student_ID=s.Student_ID
+            WHERE s.Department=p_department;
+        r c%ROWTYPE;
+    BEGIN
+        OPEN c;
+        LOOP
+            FETCH c INTO r;
+            EXIT WHEN c%NOTFOUND;
+            DBMS_OUTPUT.PUT_LINE(r.Complaint_ID||' - '||r.Name||' - '||r.Status);
+        END LOOP;
+        CLOSE c;
+    END;
+
+    PROCEDURE generate_department_report AS
+        CURSOR c IS
+            SELECT s.Department, COUNT(*) FROM COMPLAINTS c
+            JOIN STUDENTS s ON s.Student_ID=c.Student_ID
+            GROUP BY s.Department;
+        r c%ROWTYPE;
+    BEGIN
+        OPEN c;
+        LOOP
+            FETCH c INTO r;
+            EXIT WHEN c%NOTFOUND;
+            DBMS_OUTPUT.PUT_LINE(r.Department||':'||r.COUNT);
+        END LOOP;
+        CLOSE c;
+    END;
+
+    FUNCTION count_unresolved_complaints RETURN NUMBER AS
+        v NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO v FROM COMPLAINTS WHERE Status!='Resolved';
+        RETURN v;
+    END;
+
+    FUNCTION count_complaints_by_category(p_category_id IN NUMBER) RETURN NUMBER AS
+        v NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO v FROM COMPLAINTS WHERE Category_ID=p_category_id;
+        RETURN v;
+    END;
+
+    FUNCTION get_student_complaint_count(p_student_id IN NUMBER) RETURN NUMBER AS
+        v NUMBER;
+    BEGIN
+        SELECT COUNT(*) INTO v FROM COMPLAINTS WHERE Student_ID=p_student_id;
+        RETURN v;
+    END;
+
+    FUNCTION avg_resolution_time RETURN NUMBER AS
+        v NUMBER;
+    BEGIN
+        SELECT AVG(a.Date_Resolved - c.Date_Submitted)
+        INTO v
+        FROM ADMIN_ACTIONS a JOIN COMPLAINTS c
+        ON a.Complaint_ID=c.Complaint_ID;
+
+        RETURN ROUND(NVL(v,0),2);
+    END;
+
+    FUNCTION get_complaint_status(p_complaint_id IN NUMBER)
+        RETURN VARCHAR2 AS
+        v VARCHAR2(20);
+    BEGIN
+        SELECT Status INTO v FROM COMPLAINTS WHERE Complaint_ID=p_complaint_id;
+        RETURN v;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN RETURN 'NOT FOUND';
+    END;
+
+END complaint_pkg;
+/
+
+/* ============================================================
+   PHASE VII — TESTS
+   ============================================================ */
+
+SET SERVEROUTPUT ON;
+
+DECLARE
+    v_id NUMBER;
+BEGIN
+    complaint_pkg.submit_complaint(
+        26326,1,'Need assistance with exam schedule','High',v_id
+    );
+    DBMS_OUTPUT.PUT_LINE('Created ID='||v_id);
+END;
+/
+
+SELECT complaint_pkg.count_unresolved_complaints FROM dual;
+
+SELECT complaint_pkg.avg_resolution_time FROM dual;
+

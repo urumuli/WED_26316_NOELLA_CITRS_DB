@@ -1,0 +1,480 @@
+CREATE TABLE STUDENTS (
+    Student_ID NUMBER(10) PRIMARY KEY,
+    Name VARCHAR2(100) NOT NULL,
+    Department VARCHAR2(50) NOT NULL,
+    Email VARCHAR2(100) UNIQUE NOT NULL,
+    Phone VARCHAR2(20),
+    Registration_Date DATE DEFAULT SYSDATE
+);
+
+CREATE TABLE COMPLAINT_CATEGORY (
+    Category_ID NUMBER(5) PRIMARY KEY,
+    Category_Name VARCHAR2(50) NOT NULL UNIQUE,
+    Description VARCHAR2(200)
+);
+
+CREATE TABLE COMPLAINTS (
+    Complaint_ID NUMBER(10) PRIMARY KEY,
+    Student_ID NUMBER(10) NOT NULL,
+    Category_ID NUMBER(5) NOT NULL,
+    Description VARCHAR2(500) NOT NULL,
+    Date_Submitted DATE DEFAULT SYSDATE,
+    Status VARCHAR2(20) DEFAULT 'Pending',
+    Priority VARCHAR2(10) DEFAULT 'Normal',
+    CONSTRAINT fk_student FOREIGN KEY (Student_ID) 
+        REFERENCES STUDENTS(Student_ID) ON DELETE CASCADE,
+    CONSTRAINT fk_category FOREIGN KEY (Category_ID) 
+        REFERENCES COMPLAINT_CATEGORY(Category_ID),
+    CONSTRAINT chk_status CHECK (Status IN ('Pending', 'In Progress', 'Resolved', 'Closed')),
+    CONSTRAINT chk_priority CHECK (Priority IN ('Low', 'Normal', 'High', 'Urgent'))
+);
+
+CREATE TABLE ADMIN_ACTIONS (
+    Action_ID NUMBER(10) PRIMARY KEY,
+    Complaint_ID NUMBER(10) NOT NULL,
+    Admin_Name VARCHAR2(100) NOT NULL,
+    Action_Taken VARCHAR2(500) NOT NULL,
+    Date_Resolved DATE DEFAULT SYSDATE,
+    Notes VARCHAR2(500),
+    CONSTRAINT fk_complaint FOREIGN KEY (Complaint_ID) 
+        REFERENCES COMPLAINTS(Complaint_ID) ON DELETE CASCADE
+);
+
+CREATE TABLE COMPLAINT_AUDIT_LOG (
+    Audit_ID NUMBER PRIMARY KEY,
+    Complaint_ID NUMBER,
+    Changed_By VARCHAR2(100),
+    Change_Date DATE DEFAULT SYSDATE,
+    Old_Status VARCHAR2(20),
+    New_Status VARCHAR2(20),
+    Action VARCHAR2(50)
+);
+
+-- ============================================
+-- STEP 3: CREATE INDEXES
+-- ============================================
+
+CREATE INDEX idx_complaints_student ON COMPLAINTS(Student_ID);
+CREATE INDEX idx_complaints_category ON COMPLAINTS(Category_ID);
+CREATE INDEX idx_complaints_status ON COMPLAINTS(Status);
+CREATE INDEX idx_complaints_date ON COMPLAINTS(Date_Submitted);
+CREATE INDEX idx_admin_actions_complaint ON ADMIN_ACTIONS(Complaint_ID);
+CREATE INDEX idx_students_dept ON STUDENTS(Department);
+
+-- ============================================
+-- STEP 4: CREATE SEQUENCES
+-- ============================================
+
+CREATE SEQUENCE seq_complaint_id START WITH 1000 INCREMENT BY 1 NOCACHE;
+CREATE SEQUENCE seq_action_id START WITH 5000 INCREMENT BY 1 NOCACHE;
+CREATE SEQUENCE seq_audit_id START WITH 1 INCREMENT BY 1 NOCACHE;
+
+-- ============================================
+-- STEP 5: INSERT DATA
+-- ============================================
+
+-- Insert Categories
+INSERT INTO COMPLAINT_CATEGORY VALUES (1, 'Academic', 'Issues related to courses, exams, grades');
+INSERT INTO COMPLAINT_CATEGORY VALUES (2, 'Facilities', 'Infrastructure, classrooms, labs, equipment');
+INSERT INTO COMPLAINT_CATEGORY VALUES (3, 'Discipline', 'Behavioral issues, violations, conflicts');
+INSERT INTO COMPLAINT_CATEGORY VALUES (4, 'Finance', 'Fees, scholarships, payments');
+INSERT INTO COMPLAINT_CATEGORY VALUES (5, 'Technology', 'IT services, internet, systems');
+
+-- Insert Students
+INSERT INTO STUDENTS VALUES (26326, 'Urumuri Gasana Marie Noella', 'Computer Science', 'urumuri@auca.ac.rw', '0788123456', SYSDATE-365);
+INSERT INTO STUDENTS VALUES (26327, 'Mugisha Patrick', 'Business Administration', 'pmugisha@auca.ac.rw', '0788234567', SYSDATE-300);
+INSERT INTO STUDENTS VALUES (26328, 'Uwase Grace', 'Nursing', 'guwase@auca.ac.rw', '0788345678', SYSDATE-250);
+INSERT INTO STUDENTS VALUES (26329, 'Nkusi Emmanuel', 'Computer Science', 'enkusi@auca.ac.rw', '0788456789', SYSDATE-200);
+INSERT INTO STUDENTS VALUES (26330, 'Mutesi Sarah', 'Education', 'smutesi@auca.ac.rw', '0788567890', SYSDATE-180);
+INSERT INTO STUDENTS VALUES (26331, 'Byiringiro Jean', 'Computer Science', 'jbyiringiro@auca.ac.rw', '0788678901', SYSDATE-150);
+INSERT INTO STUDENTS VALUES (26332, 'Kaneza Diane', 'Business Administration', 'dkaneza@auca.ac.rw', '0788789012', SYSDATE-120);
+INSERT INTO STUDENTS VALUES (26333, 'Habimana Eric', 'Engineering', 'ehabimana@auca.ac.rw', '0788890123', SYSDATE-100);
+INSERT INTO STUDENTS VALUES (26334, 'Uwimana Alice', 'Nursing', 'auwimana@auca.ac.rw', '0788901234', SYSDATE-90);
+INSERT INTO STUDENTS VALUES (26335, 'Niyonzima David', 'Education', 'dniyonzima@auca.ac.rw', '0788012345', SYSDATE-80);
+INSERT INTO STUDENTS VALUES (26336, 'Irakoze Sandra', 'Computer Science', 'sirakoze@auca.ac.rw', '0789123456', SYSDATE-70);
+INSERT INTO STUDENTS VALUES (26337, 'Manzi Robert', 'Business Administration', 'rmanzi@auca.ac.rw', '0789234567', SYSDATE-60);
+INSERT INTO STUDENTS VALUES (26338, 'Ishimwe Betty', 'Engineering', 'bishimwe@auca.ac.rw', '0789345678', SYSDATE-50);
+INSERT INTO STUDENTS VALUES (26339, 'Kalisa Frank', 'Computer Science', 'fkalisa@auca.ac.rw', '0789456789', SYSDATE-45);
+INSERT INTO STUDENTS VALUES (26340, 'Umutoni Claire', 'Nursing', 'cumutoni@auca.ac.rw', '0789567890', SYSDATE-40);
+INSERT INTO STUDENTS VALUES (26341, 'Ndayambaje Moses', 'Education', 'mndayambaje@auca.ac.rw', '0789678901', SYSDATE-35);
+INSERT INTO STUDENTS VALUES (26342, 'Uwineza Ange', 'Business Administration', 'auwineza@auca.ac.rw', '0789789012', SYSDATE-30);
+INSERT INTO STUDENTS VALUES (26343, 'Tuyisenge Peter', 'Engineering', 'ptuyisenge@auca.ac.rw', '0789890123', SYSDATE-28);
+INSERT INTO STUDENTS VALUES (26344, 'Nyirahabimana Joyce', 'Computer Science', 'jnyirahabimana@auca.ac.rw', '0789901234', SYSDATE-26);
+INSERT INTO STUDENTS VALUES (26345, 'Hakizimana Claude', 'Nursing', 'chakizimana@auca.ac.rw', '0789012345', SYSDATE-24);
+INSERT INTO STUDENTS VALUES (26346, 'Nsengimana Daniel', 'Computer Science', 'dnsengimana@auca.ac.rw', '0789123457', SYSDATE-22);
+INSERT INTO STUDENTS VALUES (26347, 'Mukamana Rose', 'Business Administration', 'rmukamana@auca.ac.rw', '0789234568', SYSDATE-20);
+INSERT INTO STUDENTS VALUES (26348, 'Uwera Jeanne', 'Nursing', 'juwera@auca.ac.rw', '0789345679', SYSDATE-18);
+INSERT INTO STUDENTS VALUES (26349, 'Bizimana Ivan', 'Engineering', 'ibizimana@auca.ac.rw', '0789456780', SYSDATE-16);
+INSERT INTO STUDENTS VALUES (26350, 'Ingabire Peace', 'Education', 'pingabire@auca.ac.rw', '0789567891', SYSDATE-14);
+
+-- Insert Complaints
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26326, 1, 'Database exam questions were too difficult and not covered in class lectures', SYSDATE-10, 'Pending', 'High');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26327, 2, 'Computer lab AC is not working properly very hot in afternoon', SYSDATE-8, 'Pending', 'Normal');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26328, 4, 'Scholarship payment delayed for 2 months affecting my accommodation', SYSDATE-15, 'Pending', 'Urgent');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26329, 5, 'Cannot access student portal from mobile devices', SYSDATE-5, 'In Progress', 'Normal');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26330, 2, 'Library opens too late in the morning need earlier access', SYSDATE-12, 'Resolved', 'Low');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26331, 1, 'Lecturer did not upload course materials on time', SYSDATE-3, 'Pending', 'High');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26332, 3, 'Noise disturbance in dormitory after 10 PM every night', SYSDATE-7, 'In Progress', 'Normal');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26333, 2, 'Engineering lab equipment broken for 3 weeks', SYSDATE-20, 'Resolved', 'High');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26334, 1, 'Final exam schedule conflicts with two courses', SYSDATE-2, 'Pending', 'Urgent');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26335, 4, 'Incorrect tuition fee charged this semester', SYSDATE-18, 'Resolved', 'High');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26336, 5, 'Wi-Fi not working in dormitory for 5 days', SYSDATE-6, 'In Progress', 'High');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26337, 2, 'Cafeteria food quality has decreased significantly', SYSDATE-4, 'Pending', 'Normal');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26338, 1, 'Grade not yet posted after 4 weeks', SYSDATE-9, 'Pending', 'Normal');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26339, 3, 'Unfair treatment by security staff at gate', SYSDATE-11, 'In Progress', 'Normal');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26340, 2, 'Broken chairs in classroom B204', SYSDATE-14, 'Resolved', 'Low');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26341, 1, 'Missing textbooks in library for required course', SYSDATE-13, 'Pending', 'Normal');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26342, 4, 'Payment receipt not issued after fee payment', SYSDATE-16, 'Pending', 'Normal');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26343, 5, 'Printer in computer lab always out of paper', SYSDATE-1, 'Pending', 'Low');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26344, 2, 'Bathroom facilities need urgent cleaning and maintenance', SYSDATE-19, 'In Progress', 'High');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26345, 1, 'Course registration deadline too short', SYSDATE-22, 'Resolved', 'Normal');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26346, 2, 'No hot water in dormitory showers', SYSDATE-17, 'Pending', 'Normal');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26347, 3, 'Student parking lot always full', SYSDATE-11, 'In Progress', 'Low');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26348, 4, 'Financial aid office closes too early', SYSDATE-9, 'Pending', 'Normal');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26349, 5, 'Computer lab software outdated', SYSDATE-25, 'Resolved', 'High');
+INSERT INTO COMPLAINTS VALUES (seq_complaint_id.NEXTVAL, 26350, 1, 'Midterm exam schedule too compressed', SYSDATE-5, 'Pending', 'High');
+
+-- Insert Admin Actions
+INSERT INTO ADMIN_ACTIONS VALUES (seq_action_id.NEXTVAL, 1004, 'Dean of Students', 'Extended library hours from 7 AM to 6 AM starting next week', SYSDATE-2, 'New schedule posted on notice board');
+INSERT INTO ADMIN_ACTIONS VALUES (seq_action_id.NEXTVAL, 1007, 'IT Manager', 'Replaced broken equipment and conducted testing', SYSDATE-1, 'Equipment operational');
+INSERT INTO ADMIN_ACTIONS VALUES (seq_action_id.NEXTVAL, 1009, 'Finance Director', 'Fee correction processed and refund issued', SYSDATE-3, 'Receipt sent via email');
+INSERT INTO ADMIN_ACTIONS VALUES (seq_action_id.NEXTVAL, 1014, 'Facilities Manager', 'Replaced all broken chairs in classroom B204', SYSDATE-5, 'Inspected by maintenance team');
+INSERT INTO ADMIN_ACTIONS VALUES (seq_action_id.NEXTVAL, 1019, 'Academic Registrar', 'Extended registration period by 3 days', SYSDATE-4, 'Announcement sent to all students');
+INSERT INTO ADMIN_ACTIONS VALUES (seq_action_id.NEXTVAL, 1023, 'IT Director', 'Installed latest software versions in all computer labs', SYSDATE-6, 'Software testing completed');
+
+COMMIT;
+
+-- ============================================
+-- PHASE VI: PROCEDURES
+-- ============================================
+
+CREATE OR REPLACE PROCEDURE submit_complaint (
+    p_student_id IN NUMBER,
+    p_category_id IN NUMBER,
+    p_description IN VARCHAR2,
+    p_priority IN VARCHAR2 DEFAULT 'Normal',
+    p_complaint_id OUT NUMBER
+) AS
+    v_student_exists NUMBER;
+    v_category_exists NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_student_exists FROM STUDENTS WHERE Student_ID = p_student_id;
+    IF v_student_exists = 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Student ID does not exist');
+    END IF;
+    
+    SELECT COUNT(*) INTO v_category_exists FROM COMPLAINT_CATEGORY WHERE Category_ID = p_category_id;
+    IF v_category_exists = 0 THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Invalid complaint category');
+    END IF;
+    
+    IF LENGTH(TRIM(p_description)) < 10 THEN
+        RAISE_APPLICATION_ERROR(-20010, 'Description must be at least 10 characters');
+    END IF;
+    
+    INSERT INTO COMPLAINTS (Complaint_ID, Student_ID, Category_ID, Description, Priority, Status)
+    VALUES (seq_complaint_id.NEXTVAL, p_student_id, p_category_id, p_description, p_priority, 'Pending')
+    RETURNING Complaint_ID INTO p_complaint_id;
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Complaint submitted successfully ID: ' || p_complaint_id);
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END submit_complaint;
+/
+
+CREATE OR REPLACE PROCEDURE resolve_complaint (
+    p_complaint_id IN NUMBER,
+    p_admin_name IN VARCHAR2,
+    p_action_taken IN VARCHAR2,
+    p_notes IN VARCHAR2 DEFAULT NULL
+) AS
+    v_complaint_exists NUMBER;
+    v_current_status VARCHAR2(20);
+BEGIN
+    SELECT COUNT(*), MAX(Status) INTO v_complaint_exists, v_current_status
+    FROM COMPLAINTS WHERE Complaint_ID = p_complaint_id;
+    
+    IF v_complaint_exists = 0 THEN
+        RAISE_APPLICATION_ERROR(-20004, 'Complaint ID not found');
+    END IF;
+    
+    IF v_current_status = 'Resolved' THEN
+        RAISE_APPLICATION_ERROR(-20005, 'Complaint already resolved');
+    END IF;
+    
+    INSERT INTO ADMIN_ACTIONS (Action_ID, Complaint_ID, Admin_Name, Action_Taken, Notes)
+    VALUES (seq_action_id.NEXTVAL, p_complaint_id, p_admin_name, p_action_taken, p_notes);
+    
+    UPDATE COMPLAINTS SET Status = 'Resolved' WHERE Complaint_ID = p_complaint_id;
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Complaint resolved successfully');
+EXCEPTION
+    WHEN OTHERS THEN
+        ROLLBACK;
+        RAISE;
+END resolve_complaint;
+/
+
+CREATE OR REPLACE PROCEDURE update_complaint_status (
+    p_complaint_id IN NUMBER,
+    p_new_status IN VARCHAR2
+) AS
+BEGIN
+    IF p_new_status NOT IN ('Pending', 'In Progress', 'Resolved', 'Closed') THEN
+        RAISE_APPLICATION_ERROR(-20007, 'Invalid status');
+    END IF;
+    
+    UPDATE COMPLAINTS SET Status = p_new_status WHERE Complaint_ID = p_complaint_id;
+    
+    IF SQL%ROWCOUNT = 0 THEN
+        RAISE_APPLICATION_ERROR(-20008, 'Complaint ID not found');
+    END IF;
+    
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Status updated to: ' || p_new_status);
+END update_complaint_status;
+/
+
+CREATE OR REPLACE PROCEDURE list_complaints_by_department (
+    p_department IN VARCHAR2
+) AS
+    CURSOR c_complaints IS
+        SELECT c.Complaint_ID, s.Name, cat.Category_Name, c.Status, c.Priority
+        FROM COMPLAINTS c
+        JOIN STUDENTS s ON c.Student_ID = s.Student_ID
+        JOIN COMPLAINT_CATEGORY cat ON c.Category_ID = cat.Category_ID
+        WHERE s.Department = p_department
+        ORDER BY c.Date_Submitted DESC;
+    
+    v_complaint c_complaints%ROWTYPE;
+    v_count NUMBER := 0;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Complaints for: ' || p_department);
+    
+    OPEN c_complaints;
+    LOOP
+        FETCH c_complaints INTO v_complaint;
+        EXIT WHEN c_complaints%NOTFOUND;
+        v_count := v_count + 1;
+        DBMS_OUTPUT.PUT_LINE('ID: ' || v_complaint.Complaint_ID || ' - ' || v_complaint.Name);
+    END LOOP;
+    CLOSE c_complaints;
+    
+    DBMS_OUTPUT.PUT_LINE('Total: ' || v_count);
+END list_complaints_by_department;
+/
+
+CREATE OR REPLACE PROCEDURE generate_department_report AS
+    CURSOR c_dept IS
+        SELECT s.Department, COUNT(*) as Total,
+               SUM(CASE WHEN c.Status = 'Resolved' THEN 1 ELSE 0 END) as Resolved
+        FROM COMPLAINTS c
+        JOIN STUDENTS s ON c.Student_ID = s.Student_ID
+        GROUP BY s.Department;
+    
+    v_dept c_dept%ROWTYPE;
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('DEPARTMENT REPORT');
+    OPEN c_dept;
+    LOOP
+        FETCH c_dept INTO v_dept;
+        EXIT WHEN c_dept%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(v_dept.Department || ': ' || v_dept.Total || ' complaints');
+    END LOOP;
+    CLOSE c_dept;
+END generate_department_report;
+/
+
+-- ============================================
+-- PHASE VI: FUNCTIONS
+-- ============================================
+
+CREATE OR REPLACE FUNCTION count_unresolved_complaints 
+RETURN NUMBER AS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM COMPLAINTS WHERE Status != 'Resolved';
+    RETURN v_count;
+END count_unresolved_complaints;
+/
+
+CREATE OR REPLACE FUNCTION count_complaints_by_category (
+    p_category_id IN NUMBER
+) RETURN NUMBER AS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM COMPLAINTS WHERE Category_ID = p_category_id;
+    RETURN v_count;
+END count_complaints_by_category;
+/
+
+CREATE OR REPLACE FUNCTION get_student_complaint_count (
+    p_student_id IN NUMBER
+) RETURN NUMBER AS
+    v_count NUMBER;
+BEGIN
+    SELECT COUNT(*) INTO v_count FROM COMPLAINTS WHERE Student_ID = p_student_id;
+    RETURN v_count;
+END get_student_complaint_count;
+/
+
+CREATE OR REPLACE FUNCTION avg_resolution_time 
+RETURN NUMBER AS
+    v_avg NUMBER;
+BEGIN
+    SELECT AVG(aa.Date_Resolved - c.Date_Submitted)
+    INTO v_avg
+    FROM COMPLAINTS c
+    JOIN ADMIN_ACTIONS aa ON c.Complaint_ID = aa.Complaint_ID
+    WHERE c.Status = 'Resolved';
+    RETURN ROUND(NVL(v_avg, 0), 2);
+END avg_resolution_time;
+/
+
+CREATE OR REPLACE FUNCTION get_complaint_status (
+    p_complaint_id IN NUMBER
+) RETURN VARCHAR2 AS
+    v_status VARCHAR2(20);
+BEGIN
+    SELECT Status INTO v_status FROM COMPLAINTS WHERE Complaint_ID = p_complaint_id;
+    RETURN v_status;
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN RETURN 'NOT FOUND';
+END get_complaint_status;
+/
+
+-- ============================================
+-- PHASE VII: TRIGGERS
+-- ============================================
+
+CREATE OR REPLACE TRIGGER trg_auto_resolve
+AFTER INSERT ON ADMIN_ACTIONS
+FOR EACH ROW
+BEGIN
+    UPDATE COMPLAINTS SET Status = 'Resolved' WHERE Complaint_ID = :NEW.Complaint_ID;
+END trg_auto_resolve;
+/
+
+CREATE OR REPLACE TRIGGER trg_validate_complaint
+BEFORE INSERT ON COMPLAINTS
+FOR EACH ROW
+BEGIN
+    IF :NEW.Complaint_ID IS NULL THEN
+        :NEW.Complaint_ID := seq_complaint_id.NEXTVAL;
+    END IF;
+    IF :NEW.Status IS NULL THEN
+        :NEW.Status := 'Pending';
+    END IF;
+    IF LENGTH(TRIM(:NEW.Description)) < 10 THEN
+        RAISE_APPLICATION_ERROR(-20009, 'Description too short');
+    END IF;
+END trg_validate_complaint;
+/
+
+CREATE OR REPLACE TRIGGER trg_audit_changes
+AFTER UPDATE OF Status ON COMPLAINTS
+FOR EACH ROW
+BEGIN
+    INSERT INTO COMPLAINT_AUDIT_LOG 
+    (Audit_ID, Complaint_ID, Changed_By, Old_Status, New_Status, Action)
+    VALUES 
+    (seq_audit_id.NEXTVAL, :NEW.Complaint_ID, USER, :OLD.Status, :NEW.Status, 'STATUS_CHANGE');
+END trg_audit_changes;
+/
+
+CREATE OR REPLACE TRIGGER trg_log_new
+AFTER INSERT ON COMPLAINTS
+FOR EACH ROW
+BEGIN
+    INSERT INTO COMPLAINT_AUDIT_LOG
+    (Audit_ID, Complaint_ID, Changed_By, New_Status, Action)
+    VALUES
+    (seq_audit_id.NEXTVAL, :NEW.Complaint_ID, USER, :NEW.Status, 'CREATED');
+END trg_log_new;
+/
+
+-- ============================================
+-- VERIFICATION
+-- ============================================
+
+SELECT 'DATABASE CREATED SUCCESSFULLY' AS Status FROM DUAL;
+
+SELECT COUNT(*) AS Total_Students FROM STUDENTS;
+SELECT COUNT(*) AS Total_Complaints FROM COMPLAINTS;
+SELECT COUNT(*) AS Total_Categories FROM COMPLAINT_CATEGORY;
+
+-- Test 1: See all your tables
+SELECT table_name FROM user_tables;
+
+-- Test 2: Count students
+SELECT COUNT(*) AS Total_Students FROM STUDENTS;
+
+-- Test 3: See all complaints
+SELECT * FROM COMPLAINTS;
+
+-- Test 4: See complaints with student names
+SELECT c.Complaint_ID, s.Name, cat.Category_Name, c.Status
+FROM COMPLAINTS c
+JOIN STUDENTS s ON c.Student_ID = s.Student_ID
+JOIN COMPLAINT_CATEGORY cat ON c.Category_ID = cat.Category_ID;
+
+
+SET SERVEROUTPUT ON;
+
+-- Test submitting a complaint
+DECLARE
+    v_id NUMBER;
+BEGIN
+    submit_complaint(
+        p_student_id => 26326,
+        p_category_id => 1,
+        p_description => 'Need help with PL/SQL project deadline extension',
+        p_priority => 'High',
+        p_complaint_id => v_id
+    );
+    DBMS_OUTPUT.PUT_LINE('New complaint ID: ' || v_id);
+END;
+/
+
+-- Test resolving a complaint
+BEGIN
+    resolve_complaint(
+        p_complaint_id => 1000,
+        p_admin_name => 'Eric Maniraguha',
+        p_action_taken => 'Extended deadline by 3 days'
+    );
+END;
+/
+
+-- Test listing complaints by department
+BEGIN
+    list_complaints_by_department('Computer Science');
+END;
+/
+
+-- Test all functions
+SELECT count_unresolved_complaints() AS Unresolved FROM DUAL;
+SELECT count_complaints_by_category(1) AS Academic_Complaints FROM DUAL;
+SELECT get_student_complaint_count(26326) AS My_Complaints FROM DUAL;
+SELECT avg_resolution_time() AS Avg_Days FROM DUAL;
+
+
+ 
+-- Insert admin action and see status change
+INSERT INTO ADMIN_ACTIONS VALUES (
+    seq_action_id.NEXTVAL, 
+    1001, 
+    'Test Admin', 
+    'Test resolution',
+    SYSDATE,
+    'Testing trigger'
+);
+
+-- Check if status changed to Resolved
+SELECT Complaint_ID, Status FROM COMPLAINTS WHERE Complaint_ID = 1001;
+
+-- Check audit log
+SELECT * FROM COMPLAINT_AUDIT_LOG;
